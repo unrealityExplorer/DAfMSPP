@@ -8,10 +8,11 @@ pacman::p_load(
   DT,           # interactive tables for data overview
   ggstatsplot,  # charts with statistical calculations results
   gtsummary,    # summary table with calculations results
-  gt,           # for rendering summary table in ui
+  gt,           # rendering summary table in ui
+  flextable,    # downloading summary tables in various formats
   waiter,       # loading placeholders
   shinythemes,  # ui colors templates
-  rlang,        # workaround solution for reading inputs in the server code
+  rlang,        # workaround solution for reading inputs in the server code w/ tidyverse-oriented functions
   scales,       # for auto-gradient coloring feature for catergorical variables chart
   xtable,       # simplistic table output in ui
   ggside,       # side histograms for scatterplot
