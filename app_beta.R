@@ -207,6 +207,16 @@ summary_table_page <- tabPanel(
       selectInput("selected_columns_for_summary_table", label = "Выбрать колонки переменных для вычислений", choices = c(not_sel), multiple = TRUE),
       selectInput("grouping_variable_for_summary_table", label = "Выбрать группирующую характеристику", choices = c(not_sel)),
       actionButton("run_summary", "Проанализировать", icon = icon("play")),
+      tabsetPanel(
+        id = "dl_st",
+        type = "hidden",
+        selected = "dl_st_placeholder",
+        tabPanel("dl_st_placeholder"),
+        tabPanel("download_summ_table_panel",
+                 selectInput("summ_table_download_format", label = "Выбрать формат для скачивания таблицы", choices = c(".docx", ".rtf", ".png", ".pptx", ".html")),
+                 downloadButton("summ_table_download_button", label = "Загрузить таблицу", icon = icon("download"))
+          )
+      )
     ),
     mainPanel(
       waiter::autoWaiter(),
@@ -235,7 +245,7 @@ correlation_and_regression_page <- tabPanel(
           "Проверить наличие зависимости между изменениями значений переменных и её выраженность",
           selectInput("numerical_variable_predictor_f_corr", label = "Выбрать интересующую числовую переменную №1", choices = c(not_sel)),
           selectInput("numerical_variable_dependent_f_corr", label = "Выбрать интересующую числовую переменную №2", choices = c(not_sel)),
-          actionButton("run_correlation", label = "Проанализировать")
+          actionButton("run_correlation", label = "Проанализировать", icon = icon("play"))
         ),
         tabPanel(
           "Выявить меру изменения одной зависимой переменной при изменении другой переменной",
@@ -505,6 +515,11 @@ server <- function(input, output, session) {
 
   })
 
+  observeEvent(summary_table_reactive(), {
+    
+    updateTabsetPanel(inputId = "dl_st", selected = "download_summ_table_panel")
+    
+    })
 
     # создание графика для рассмотрения распределения одной переменной -------------
 
@@ -711,8 +726,7 @@ server <- function(input, output, session) {
         add_stat_label(label = all_continuous() ~ "Медиана (Межквартильный размах)") |>
         modify_header(
           label = "**Характеристика**"
-        ) |>
-        as_gt()
+        )
     } else if (length(sel_cols_f_summ_t) == 0 & gr_var_f_summ != not_sel) {
       dat |>
         tbl_summary(
@@ -726,8 +740,7 @@ server <- function(input, output, session) {
         modify_header(
           label = "**Характеристика**",
           p.value = "**p-значение**"
-        ) |>
-        as_gt()
+        )
     } else if (length(sel_cols_f_summ_t) != 0 & gr_var_f_summ != not_sel) {
       dat |>
         select(all_of(sel_cols_f_summ_t)) |>
@@ -742,8 +755,7 @@ server <- function(input, output, session) {
         modify_header(
           label = "**Характеристика**",
           p.value = "**p-значение**"
-        ) |>
-        as_gt()
+        )
     } else if (length(sel_cols_f_summ_t) != 0 & gr_var_f_summ == not_sel) {
       dat |>
         select(all_of(sel_cols_f_summ_t)) |>
@@ -754,21 +766,63 @@ server <- function(input, output, session) {
         add_stat_label(label = all_continuous() ~ "Медиана (Межквартильный размах)") |>
         modify_header(
           label = "**Характеристика**"
-        ) |>
-        as_gt()
+        )
     }
   }
 
   summary_table_reactive <- eventReactive(input$run_summary, {
-    summary_table_function(
-      dat = data(),
-      gr_var_f_summ = input$grouping_variable_for_summary_table,
-      sel_cols_f_summ_t = input$selected_columns_for_summary_table
+    
+      summary_table_function(
+        dat = data(),
+        gr_var_f_summ = input$grouping_variable_for_summary_table,
+        sel_cols_f_summ_t = input$selected_columns_for_summary_table
       )
+    
   })
 
-  output$summ_table <- gt::render_gt(summary_table_reactive())
-    # страничка с корреалограммой ----
+  output$summ_table <- gt::render_gt(as_gt(summary_table_reactive()))
+  
+  
+  output$summ_table_download_button <- downloadHandler(
+    filename = function() {
+      paste0("summary_table", input$summ_table_download_format)
+    },
+    content = function(file, stextenstion = input$summ_table_download_format) {
+      
+      if (stextenstion == ".docx"){
+        summary_table_reactive() |> 
+          as_flex_table() |> 
+          save_as_docx(path = file)
+      }
+      
+      else if (stextenstion == ".rtf"){
+        summary_table_reactive() |> 
+          as_flex_table() |> 
+          save_as_rtf(path = file)
+      }
+      
+      else if (stextenstion == ".png"){
+        summary_table_reactive() |> 
+          as_flex_table() |> 
+          save_as_image(path = file)
+      }
+      
+      else if (stextenstion == ".pptx"){
+        summary_table_reactive() |> 
+          as_flex_table() |> 
+          save_as_pptx(path = file)
+      }
+      
+      else if (stextenstion == ".html"){
+        summary_table_reactive() |> 
+          as_flex_table() |> 
+          save_as_html(path = file)
+      }
+      
+    }
+  )
+    
+  # страничка с корреалограммой ----
 
 
   scatterplot_n_correlation_function <- function(dat, numerical_variable_x, numerical_variable_y){
